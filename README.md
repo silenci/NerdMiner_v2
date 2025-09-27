@@ -34,6 +34,33 @@ Every time an stratum job notification is received miner update its current work
 
 **_Current project is still in developement and more features will be added_**
 
+## Recent Changes in This Fork
+
+This repository is a fork of the original NerdSoloMiner project, with a focus on improved support and user experience for the ESP32-2432S024R board and general touch handling. Below is a summary of the most recent changes:
+
+### ESP32-2432S024R Display & Touchscreen Support
+- Added full support for the ESP32-2432S024R display and touchscreen, including initialization, screen switching, and integration with the main miner logic.
+- Improved configuration options and hardware abstraction for this board.
+
+### Unified Touch Handling & Calibration
+- Refactored and unified the touch handling logic for all supported boards, with special attention to the ESP32-2432S024R.
+- Implemented a robust calibration system: users can trigger calibration by holding the screen for 10 seconds, and the calibration data is saved and loaded automatically.
+- Touch state management and debounce logic have been improved for more reliable screen switching and calibration.
+
+### Codebase Refactoring & Stability
+- Refactored touch and calibration code for clarity, maintainability, and stability.
+- Improved separation between calibration logic, touch event handling, and display driver code.
+- Added configuration options and improved documentation in the code for easier customization.
+
+### General Improvements
+- Cleaned up debug output and improved serial logging for easier troubleshooting (now removed for production use).
+- Enhanced configuration file handling and settings persistence.
+- Various bugfixes and minor improvements to ensure a smoother user experience on all supported hardware.
+
+For more details, see the commit history and code comments. If you are migrating from the original project, these changes should make the ESP32-2432S024R experience much more robust and user-friendly.
+
+---
+
 ## Build Tutorial
 
 ### Hardware requirements
