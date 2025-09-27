@@ -82,7 +82,7 @@ void esp32_2432S024R_Init(void)
   ledcAttachPin(LED_PIN_G, 3);  // LED verde al canal 3
   
   // Configure LEDs off initially (inverted logic: 255=off, 0=full on)
-  ledcWrite(1, 255);  // LED rojo apagado
+  ledcWrite(2, 255);  // LED azul apagado
   ledcWrite(2, 255);  // LED azul apagado  
   ledcWrite(3, 255);  // LED verde apagado
   
@@ -103,8 +103,7 @@ void esp32_2432S024R_Init(void)
 
 void esp32_2432S024R_AlternateScreenState(void)
 {
-  Serial.println("[DEBUG] esp32_2432S024R_AlternateScreenState() called directly!");
-  Serial.println("Switching display state");
+  // ...existing code...
   int screen_state_duty = ledcRead(0);
   if (screen_state_duty > 0) {
     ledcWrite(0, 0);
@@ -121,11 +120,7 @@ void esp32_2432S024R_AlternateRotation(void)
 
 // Touch reading function for TouchHandler compatibility
 bool esp32_2432S024R_getTouch(uint16_t *x, uint16_t *y) {
-  bool result = tft.getTouch(x, y, 200);  // 200 is touch threshold
-  if (result) {
-    Serial.printf("[DEBUG] esp32_2432S024R_getTouch() called! x=%d, y=%d\n", *x, *y);
-  }
-  return result;
+  return tft.getTouch(x, y, 200);  // 200 is touch threshold
 }
 
 bool bottomScreenBlue = true;
@@ -473,52 +468,52 @@ void esp32_2432S024R_DoLedStuff(unsigned long frame)
   currentScreen = currentDisplayDriver->current_cyclic_screen;
 
 #ifdef ALTERNATIVE_LED_SETUP
-  // Alternative LED setup: fixed low intensity LED
+  // Alternative LED setup: fixed low intensity LED (blue)
   switch (mMonitor.NerdStatus)
   {
   case NM_waitingConfig:
-    ledcWrite(1, 200); // LED rojo intensidad baja fija
-    ledcWrite(2, 255); // LED azul apagado
+    ledcWrite(1, 255); // LED rojo apagado
+    ledcWrite(2, 254); // LED azul encès a intensitat mínima
     ledcWrite(3, 255); // LED verde apagado
     break;
 
   case NM_Connecting:
-    ledcWrite(1, 200); // LED rojo intensidad baja fija
-    ledcWrite(2, 255); // LED azul apagado
+    ledcWrite(1, 255); // LED rojo apagado
+    ledcWrite(2, 254); // LED azul encès a intensitat mínima
     ledcWrite(3, 255); // LED verde apagado
     break;
 
   case NM_hashing:
-    ledcWrite(1, 200); // LED rojo intensidad baja fija
-    ledcWrite(2, 255); // LED azul apagado
+    ledcWrite(1, 255); // LED rojo apagado
+    ledcWrite(2, 254); // LED azul encès a intensitat mínima
     ledcWrite(3, 255); // LED verde apagado
     break;
   }
 #else
-  // Standard LED behavior
+  // Standard LED behavior (original)
   switch (mMonitor.NerdStatus)
   {
   case NM_waitingConfig:
-    ledcWrite(1, 0); // LED rojo encendido continuo
+    ledcWrite(1, 0);   // LED rojo encendido continuo
     ledcWrite(2, 255); // LED azul apagado
     ledcWrite(3, 255); // LED verde apagado
     break;
 
   case NM_Connecting:
     if (currentMillis - previousMillis >= 500)
-    { 
+    {
       previousMillis = currentMillis;
       static bool ledState = false;
       ledState = !ledState;
       ledcWrite(1, ledState ? 0 : 255); // LED rojo parpadeando
-      ledcWrite(2, ledState ? 255 : 0); // LED azul parpadeando inverso
+      ledcWrite(2, 255); // LED azul apagado
       ledcWrite(3, 255); // LED verde apagado
     }
     break;
 
   case NM_hashing:
     if (currentMillis - previousMillis >= 500)
-    { 
+    {
       previousMillis = currentMillis;
       static bool ledState = false;
       ledState = !ledState;

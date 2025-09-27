@@ -60,8 +60,8 @@ bool TouchCalibrator::calibrate(struct TouchCalibration* calibData,
                 current_x = touch_x;
                 current_y = touch_y;
                 
-                // Visual feedback - show touch detected (BRIGHT YELLOW)
-                drawTarget(points_[i].screen_x, points_[i].screen_y, 0xFFE0);
+                // Visual feedback - show touch detected
+                drawTarget(points_[i].screen_x, points_[i].screen_y, TFT_YELLOW);
                 
             } else if (!touchDetected && touching) {
                 // Touch released - now capture the point
@@ -74,8 +74,8 @@ bool TouchCalibrator::calibrate(struct TouchCalibration* calibData,
                                 i + 1, points_[i].screen_x, points_[i].screen_y,
                                 current_x, current_y);
                     
-                    // Visual feedback - show point captured (BRIGHT GREEN)
-                    drawTarget(points_[i].screen_x, points_[i].screen_y, 0x07E0);
+                    // Visual feedback - show point captured
+                    drawTarget(points_[i].screen_x, points_[i].screen_y, TFT_GREEN);
                     delay(800);
                     
                     pointCaptured = true;
@@ -120,7 +120,7 @@ bool TouchCalibrator::calibrate(struct TouchCalibration* calibData,
     delay(3000);
     
     // Force screen redraw when calibration ends
-    tft_.fillScreen(0x0000); // Pure black
+    tft_.fillScreen(TFT_BLACK);
     
     // Set flag to force background redraw on next screen update
     extern bool hasChangedScreen;
@@ -130,28 +130,28 @@ bool TouchCalibrator::calibrate(struct TouchCalibration* calibData,
 }
 
 void TouchCalibrator::drawCalibrationScreen(int step, uint16_t x, uint16_t y) {
-    // Ensure completely black background
-    tft_.fillScreen(0x0000); // Pure black (RGB565)
+    // Use TFT_eSPI color constants that work with both normal and inverted displays
+    tft_.fillScreen(TFT_BLACK);
     
     // Title with high contrast
-    tft_.setTextColor(0xFFFF, 0x0000); // White text on black
+    tft_.setTextColor(TFT_WHITE, TFT_BLACK);
     tft_.setTextSize(2);
     tft_.setCursor(10, 10);
     tft_.printf("Touch Calibration");
     
     // Step info with high contrast
-    tft_.setTextColor(0x07FF, 0x0000); // Cyan text on black
+    tft_.setTextColor(TFT_CYAN, TFT_BLACK);
     tft_.setTextSize(1);
     tft_.setCursor(10, 40);
     tft_.printf("Step %d of %d", step, NUM_POINTS);
     
     // Instructions with high contrast
-    tft_.setTextColor(0xFFE0, 0x0000); // Yellow text on black
+    tft_.setTextColor(TFT_YELLOW, TFT_BLACK);
     tft_.setCursor(10, 60);
     tft_.printf("Touch and release the target");
     
     // Draw target with bright red
-    drawTarget(x, y, 0xF800); // Bright red (RGB565)
+    drawTarget(x, y, TFT_RED);
 }
 
 void TouchCalibrator::drawTarget(uint16_t x, uint16_t y, uint16_t color) {

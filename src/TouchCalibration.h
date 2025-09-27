@@ -18,19 +18,33 @@ public:
     void drawCalibrationScreen(int step, uint16_t x, uint16_t y);
     
     // Static method to check if calibration should be triggered (touch only for 10 seconds)
-  static bool isCalibrationTrigger(bool touchPressed) {
+  static void resetCalibrationTriggerState() {
+    // Reset the state by calling isCalibrationTrigger with resetState=true
+    isCalibrationTrigger(false, true);
+  }
+  
+  static bool isCalibrationTrigger(bool touchPressed, bool resetState = false) {
     static unsigned long triggerStartTime = 0;
     static bool wasTriggering = false;
     static unsigned long lastProgressUpdate = 0;
     
+    // Reset state if requested
+    if (resetState) {
+      triggerStartTime = 0;
+      wasTriggering = false;
+      lastProgressUpdate = 0;
+      // Serial.println("[TouchCalibration] Calibration trigger state reset");
+      return false;
+    }
+    
     if (touchPressed && !wasTriggering) {
       // Just started touching
       triggerStartTime = millis();
-      Serial.println("Hold touch for 10 seconds to start calibration...");
+      // Serial.println("Hold touch for 10 seconds to start calibration...");
     } else if (!touchPressed && wasTriggering) {
       // Stopped touching
       triggerStartTime = 0;
-      Serial.println("Touch released - calibration cancelled");
+      // Serial.println("Touch released - calibration cancelled");
     }
     
     // Show progress every second while holding
@@ -39,7 +53,7 @@ public:
       if (elapsed - lastProgressUpdate >= 1000) {
         int secondsLeft = 10 - (elapsed / 1000);
         if (secondsLeft > 0) {
-          Serial.printf("Calibration in %d seconds...\n", secondsLeft);
+          // Serial.printf("Calibration in %d seconds...\n", secondsLeft);
         }
         lastProgressUpdate = elapsed;
       }

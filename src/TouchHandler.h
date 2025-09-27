@@ -16,7 +16,6 @@ extern bool esp32_2432S024R_getTouch(uint16_t *x, uint16_t *y);
 
 class TouchHandler {
 public:
-  TouchHandler();
   ~TouchHandler();
   TouchHandler(TFT_eSPI& tft, uint8_t csPin, uint8_t irqPin, SPIClass& spi);
   void begin(uint16_t xres, uint16_t yres);
@@ -27,6 +26,7 @@ public:
   // Touch calibration methods
   void setTouchCalibration(const struct TouchCalibration& calibration);
   bool performCalibration();       // Execute calibration process and save results
+  void resetTouchState();          // Reset touch state after calibration
 private:
   bool debounce();
   TFT_eSPI& tft;
@@ -44,6 +44,7 @@ private:
   void (*screenSwitchAltCallback)();
   struct TouchCalibration touchCalibration_;
   bool lastTouchState_;  // Last touch state from isTouched() for checkCalibrationTrigger()
+  bool resetTouchStateRequested_;  // Flag to reset static variables in isTouched()
 };
 #endif
 

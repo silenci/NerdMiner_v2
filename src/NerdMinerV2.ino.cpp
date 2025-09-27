@@ -294,6 +294,12 @@ void loop() {
       // Re-enable screen switching callback (gets lost during calibration)
       touchHandler.setScreenSwitchCallback(alternateScreenState);
       
+      // Reset touch state to clear any inconsistent static variables
+      touchHandler.resetTouchState();
+      
+      // Reset calibration trigger state to clear the wasTriggering flag
+      TouchCalibrator::resetCalibrationTriggerState();
+      
       Serial.println("Touch calibration applied and saved!");
     } else {
       Serial.println("Touch calibration failed!");

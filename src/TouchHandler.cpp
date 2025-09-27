@@ -10,12 +10,15 @@
   #define TOUCH_DEBOUNCE_MS 2000 // Default debounce time in milliseconds
 #endif
 
+
+
 TouchHandler::~TouchHandler() {
 }
 
 TouchHandler::TouchHandler(TFT_eSPI& tft, uint8_t csPin, uint8_t irqPin, SPIClass& spi)
   : tft(tft), csPin(csPin), irqPin(irqPin), spi(spi), lastTouchTime(0),
-  screenSwitchCallback(nullptr), screenSwitchAltCallback(nullptr), lastTouchState_(false)
+  screenSwitchCallback(nullptr), screenSwitchAltCallback(nullptr), lastTouchState_(false),
+  resetTouchStateRequested_(false)
 #ifndef ESP32_2432S024R
   , touch(spi, csPin, irqPin)
 #endif
@@ -27,7 +30,7 @@ void TouchHandler::begin(uint16_t xres, uint16_t yres) {
 #ifdef ESP32_2432S024R
     // For ESP32-2432S024R, touch is initialized in display driver
     // Nothing to do here
-    Serial.println("[TouchHandler] Using ESP32-2432S024R external touch function");
+  // ...existing code...
 #else
     spi.begin(TOUCH_CLK, TOUCH_MISO, TOUCH_MOSI);
     touch.begin(xres, yres);
@@ -47,16 +50,35 @@ uint16_t TouchHandler::isTouched() {
   // XXX - move touch_x, touch_y to private and min_x, min_y,max_x, max_y
   uint16_t touch_x, touch_y, code = 0;
   bool touched = false;
+  
+  // Static variables to store last valid touch coordinates
+  static uint16_t lastValidTouchX = 0;
+  static uint16_t lastValidTouchY = 0;
 
 #ifdef ESP32_2432S024R
   // Use external touch function for ESP32-2432S024R
   touched = esp32_2432S024R_getTouch(&touch_x, &touch_y);
+  
+  // Store last valid coordinates when touch is detected
+  if (touched) {
+    lastValidTouchX = touch_x;
+    lastValidTouchY = touch_y;
+  } else {
+    // Use last valid coordinates when touch is released
+    touch_x = lastValidTouchX;
+    touch_y = lastValidTouchY;
+  }
 #else
   // Use original method for other devices
   if (touch.pressed()) {
     touched = true;
     touch_x = touch.RawX();
     touch_y = touch.RawY();
+    lastValidTouchX = touch_x;
+    lastValidTouchY = touch_y;
+  } else {
+    touch_x = lastValidTouchX;
+    touch_y = lastValidTouchY;
   }
 #endif
   
@@ -67,9 +89,19 @@ uint16_t TouchHandler::isTouched() {
   static bool wasTouched = false;
   static unsigned long touchStartTime = 0;
   
+  // Reset state if requested via member flag  
+  if (resetTouchStateRequested_) {
+    wasTouched = false;
+    touchStartTime = 0;
+    lastValidTouchX = 0;
+    lastValidTouchY = 0;
+    resetTouchStateRequested_ = false;
+  // ...existing code...
+  }
+  
   // 1. First check for calibration trigger (10 second hold)
   if (TouchCalibrator::isCalibrationTrigger(touched)) {
-    Serial.println("Calibration trigger detected from unified touch logic!");
+  // ...existing code...
     return 999;  // Special code for calibration trigger
   }
   
@@ -84,21 +116,32 @@ uint16_t TouchHandler::isTouched() {
     unsigned long touchDuration = millis() - touchStartTime;
     wasTouched = false;
     
+  // ...existing code...
+    
     // Only switch screen for short touches (less than 2 seconds)
     // This prevents screen switching during calibration trigger (10s hold)
     if (touchDuration < 2000) {
 #ifdef DISABLE_TOUCH_ZONES
       // When touch zones are disabled, any short touch release triggers screen switch
 #ifdef ESP32_2432S024R
-      // For ESP32-2432S024R, validate coordinates from last touch
-      if (touch_x >= 0 && touch_x <= 240 && touch_y >= 0 && touch_y <= 320) {
+      // For ESP32-2432S024R, validate coordinates from last touch using actual screen dimensions
+      uint16_t screenWidth = tft.width();
+      uint16_t screenHeight = tft.height();
+  // ...existing code...
+      if (touch_x >= 0 && touch_x <= screenWidth && touch_y >= 0 && touch_y <= screenHeight) {
 #endif
-        Serial.printf("Touch released after %lums at: x=%d, y=%d - switching display state\n", touchDuration, touch_x, touch_y);
+        bool debounceOK = debounce();
+  // ...existing code...
         code = 1;
-        if (debounce() && screenSwitchCallback) {
+        if (debounceOK && screenSwitchCallback) {
+          // ...existing code...
           screenSwitchCallback();  // This should be alternateScreenState
+        } else {
+          // ...existing code...
         }
 #ifdef ESP32_2432S024R
+      } else {
+  // ...existing code...
       }
 #endif
 #else
@@ -118,14 +161,14 @@ uint16_t TouchHandler::isTouched() {
         if (debounce() && screenSwitchAltCallback) {
           screenSwitchAltCallback();
         }
-        Serial.print("Touch bottom (released)\n");
+  // ...existing code...
       } else {
         // top/right zone
         code = 2;
         if (debounce() && screenSwitchCallback) {
           screenSwitchCallback();
         }
-        Serial.print("Touch top (released)\n");
+  // ...existing code...
       }
 #endif
     } // End of touchDuration < 2000 check
@@ -145,15 +188,13 @@ bool TouchHandler::debounce() {
 
 void TouchHandler::setTouchCalibration(const struct TouchCalibration& calibration) {
   touchCalibration_ = calibration;
-  Serial.printf("[TouchHandler] Calibration set: X(%d-%d) Y(%d-%d) Calibrated=%s\n",
-                calibration.min_x, calibration.max_x, calibration.min_y, calibration.max_y,
-                calibration.calibrated ? "true" : "false");
+  // ...existing code...
 }
 
 // checkCalibrationTrigger() is now integrated into isTouched() for unified touch handling
 
 bool TouchHandler::performCalibration() {
-  Serial.println("[TouchHandler] Starting touch calibration...");
+  // ...existing code...
   
   // Create calibrator instance
   TouchCalibrator calibrator(tft);
@@ -186,22 +227,27 @@ bool TouchHandler::performCalibration() {
       
       // Save back with all data preserved
       if (nvMem.saveConfig(&currentSettings)) {
-        Serial.println("[TouchHandler] Touch calibration completed and saved!");
+  // ...existing code...
         // Update global settings with new calibration
         Settings.touchCalibration = newCalib;
         return true;
       } else {
-        Serial.println("[TouchHandler] Failed to save touch calibration!");
+  // ...existing code...
         return false;
       }
     } else {
-      Serial.println("[TouchHandler] Failed to load current settings for calibration save!");
+  // ...existing code...
       return false;
     }
   }
   
-  Serial.println("[TouchHandler] Touch calibration failed!");
+  // ...existing code...
   return false;
+}
+
+void TouchHandler::resetTouchState() {
+  // ...existing code...
+  resetTouchStateRequested_ = true;
 }
 
 #endif
