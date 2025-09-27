@@ -20,11 +20,7 @@
 #include "TouchHandler.h"
 #endif
 
-#ifdef ESP32_2432S024R
-#include <TFT_eSPI.h>
-extern TFT_eSPI tft;
-extern void esp32_2432S028R_AlternateScreenState(void);
-#endif
+
 
 #include <soc/soc_caps.h>
 //#define HW_SHA256_TEST
@@ -43,9 +39,7 @@ extern void esp32_2432S028R_AlternateScreenState(void);
 #endif
 
 #ifdef TOUCH_ENABLE
-#ifndef ESP32_2432S024R
 extern TouchHandler touchHandler;
-#endif
 #endif
 
 extern monitor_data mMonitor;
@@ -116,20 +110,20 @@ void setup()
 #endif
 
   // Setup the buttons
-#ifdef ESP32_2432S024R
-  // ESP32-2432S024R: Simple button behavior - only screen backlight toggle
+#ifdef DISABLE_SCREEN_SWITCHING
+  // Simple button behavior - only screen backlight toggle
   #ifdef PIN_BUTTON_1
     button1.setPressMs(5*SECOND_MS);
-    button1.attachClick(esp32_2432S028R_AlternateScreenState); // Simple backlight toggle
+    button1.attachClick(alternateScreenState); // Simple backlight toggle
     button1.attachLongPressStart(reset_configuration);
   #endif
   #ifdef PIN_BUTTON_2
     button2.setPressMs(5*SECOND_MS);
-    button2.attachClick(esp32_2432S028R_AlternateScreenState); // Simple backlight toggle
+    button2.attachClick(alternateScreenState); // Simple backlight toggle
     button2.attachLongPressStart(reset_configuration);
   #endif
 #else
-  // Other devices: Full button functionality
+  // Full button functionality
   #if defined(PIN_BUTTON_1) && !defined(PIN_BUTTON_2) //One button device
     button1.setPressMs(5*SECOND_MS);
     button1.attachClick(switchToNextScreen);
@@ -265,55 +259,7 @@ void loop() {
   #endif
 
 #ifdef TOUCH_ENABLE
-#ifdef ESP32_2432S024R
-  // Simple touch handling for ESP32-2432S024R using TFT_eSPI
-  static unsigned long lastTouchTime = 0;
-  static bool lastTouchState = false;
-  static unsigned long lastDebugTime = 0;
-  
-  // Debug: Track coordinate ranges
-  static uint16_t min_x = 65535, max_x = 0;
-  static uint16_t min_y = 65535, max_y = 0;
-  static bool ranges_initialized = false;
-  
-  uint16_t x, y;
-  bool touched = tft.getTouch(&x, &y, 200);
-  
-  // Track coordinate ranges when touching
-  if (touched) {
-    if (!ranges_initialized) {
-      min_x = max_x = x;
-      min_y = max_y = y;
-      ranges_initialized = true;
-    } else {
-      if (x < min_x) min_x = x;
-      if (x > max_x) max_x = x;
-      if (y < min_y) min_y = y;
-      if (y > max_y) max_y = y;
-    }
-    
-    // Show ranges every 5 seconds
-    if (millis() - lastDebugTime > 5000) {
-      Serial.printf("Touch ranges detected - X: %d-%d, Y: %d-%d (Current: x=%d, y=%d)\n", 
-                    min_x, max_x, min_y, max_y, x, y);
-      lastDebugTime = millis();
-    }
-  }
-  
-  if (touched && !lastTouchState && (millis() - lastTouchTime > 500)) {
-    // Accept touch anywhere on screen with coordinate validation
-    if (x >= 0 && x <= 240 && y >= 0 && y <= 320) {
-      Serial.printf("Touch at: x=%d, y=%d - switching display state\n", x, y);
-      esp32_2432S028R_AlternateScreenState();
-      lastTouchTime = millis();
-      lastTouchState = true;
-    }
-  } else if (!touched) {
-    lastTouchState = false;
-  }
-#else
   touchHandler.isTouched();
-#endif
 #endif
   wifiManagerProcess(); // avoid delays() in loop when non-blocking and other long running code
 

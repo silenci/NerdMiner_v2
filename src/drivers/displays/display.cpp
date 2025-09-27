@@ -1,4 +1,5 @@
 #include "display.h"
+#include "displayDriver.h"
 
 #ifdef NO_DISPLAY
 DisplayDriver *currentDisplayDriver = &noDisplayDriver;

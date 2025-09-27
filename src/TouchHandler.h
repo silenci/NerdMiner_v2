@@ -26,8 +26,7 @@ private:
   bool debounce();
   TFT_eSPI& tft;
 #ifdef ESP32_2432S024R
-  // Use external touchscreen function for ESP32-2432S024R
-  // (no need for XPT2046 object here, it's handled in display driver)
+  // Use TFT_eSPI integrated touchscreen (no need for XPT2046 object)
 #else
   XPT2046 touch;
 #endif

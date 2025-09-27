@@ -406,7 +406,7 @@ void init_WifiManager()
     Serial.print("TimeZone fromUTC: ");
     Serial.println(Settings.Timezone);
 
-    #if definedESP32_2432S028R)  || defined(ESP32_2432S024R)
+    #if defined(ESP32_2432S028R) || defined(ESP32_2432S024R)
     Settings.invertColors = (strncmp(invertColors.getValue(), "T", 1) == 0);
     Serial.print("Invert Colors: ");
     Serial.println(Settings.invertColors);

@@ -1,4 +1,5 @@
 #include "displayDriver.h"
+#include "display.h"
 
 #if defined(ESP32_2432S024R)
 
@@ -23,6 +24,11 @@ extern nvMemory nvMem;
 OpenFontRender render;
 TFT_eSPI tft = TFT_eSPI();                  // Invoke library, pins defined in platformio.ini
 TFT_eSprite background = TFT_eSprite(&tft); // Invoke library sprite
+
+#ifdef TOUCH_ENABLE
+#include "TouchHandler.h"
+TouchHandler touchHandler = TouchHandler(tft, 0, 0, SPI);
+#endif
 
 extern monitor_data mMonitor;
 extern pool_data pData;
@@ -82,6 +88,11 @@ void esp32_2432S024R_Init(void)
   pData.bestDifficulty = "0";
   pData.workersHash = "0";
   pData.workersCount = 0;
+  
+#ifdef TOUCH_ENABLE
+  touchHandler.begin(tft.width(), tft.height());
+  touchHandler.setScreenSwitchCallback(alternateScreenState);
+#endif
 }
 
 void esp32_2432S024R_AlternateScreenState(void)
@@ -101,7 +112,7 @@ void esp32_2432S024R_AlternateRotation(void)
   hasChangedScreen = true;
 }
 
-// Touch reading function for ESP32-2432S024R using TFT_eSPI integrated touch
+// Touch reading function for TouchHandler compatibility
 bool esp32_2432S024R_getTouch(uint16_t *x, uint16_t *y) {
   return tft.getTouch(x, y, 200);  // 200 is touch threshold
 }
@@ -184,14 +195,15 @@ void printPoolData(){
   }
 }
 
+// Include all the screen functions and LED functions from the original file
+// (copying the rest of the functions from the original corrupted file)
+
 void esp32_2432S024R_MinerScreen(unsigned long mElapsed)
 {
   mining_data data = getMiningData(mElapsed);
-
   printPoolData();
 
   if (hasChangedScreen) tft.pushImage(0, 0, initWidth, initHeight, MinerScreen);
-    
   hasChangedScreen = false; 
  
   int wdtOffset = 190;
@@ -425,32 +437,9 @@ char currentScreen = 0;
 void esp32_2432S024R_DoLedStuff(unsigned long frame)
 {
   unsigned long currentMillis = millis();    
-  
-  // Check the touch coordinates
-  if (currentMillis - previousTouchMillis >= 500)
-    { 
-      uint16_t t_x, t_y;
-      if (esp32_2432S024R_getTouch(&t_x, &t_y)) {                        
-          if (((t_x > 109)&&(t_x < 211)) && ((t_y > 185)&&(t_y < 241))) {
-            bottomScreenBlue ^= true;
-            hasChangedScreen = true;
-          } else if((t_x > 235) && ((t_y > 0)&&(t_y < 16))) {
-            esp32_2432S024R_AlternateScreenState();
-          }
-          else
-            if (t_x > 160) {
-              currentDisplayDriver->current_cyclic_screen = (currentDisplayDriver->current_cyclic_screen + 1) % currentDisplayDriver->num_cyclic_screens;
-            } else if (t_x < 160)
-            {
-              currentDisplayDriver->current_cyclic_screen = currentDisplayDriver->current_cyclic_screen - 1;      
-              if (currentDisplayDriver->current_cyclic_screen<0) currentDisplayDriver->current_cyclic_screen = currentDisplayDriver->num_cyclic_screens - 1;              
-            }
-      }
-      previousTouchMillis = currentMillis;
-    }
 
-    if (currentScreen != currentDisplayDriver->current_cyclic_screen) hasChangedScreen ^= true;
-    currentScreen = currentDisplayDriver->current_cyclic_screen;
+  if (currentScreen != currentDisplayDriver->current_cyclic_screen) hasChangedScreen ^= true;
+  currentScreen = currentDisplayDriver->current_cyclic_screen;
 
   switch (mMonitor.NerdStatus)
   {
