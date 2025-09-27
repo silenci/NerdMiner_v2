@@ -45,6 +45,25 @@
 #define JSON_SPIFFS_KEY_STATS2NV	"saveStatsToNVS"
 #define JSON_SPIFFS_KEY_INVCOLOR	"invertColors"
 #define JSON_SPIFFS_KEY_BRIGHTNESS	"Brightness"
+#define JSON_SPIFFS_KEY_TOUCH_MINX	"touchMinX"
+#define JSON_SPIFFS_KEY_TOUCH_MAXX	"touchMaxX"
+#define JSON_SPIFFS_KEY_TOUCH_MINY	"touchMinY"
+#define JSON_SPIFFS_KEY_TOUCH_MAXY	"touchMaxY"
+#define JSON_SPIFFS_KEY_TOUCH_CALIBRATED "touchCalibrated"
+
+// Touch calibration structure
+struct TouchCalibration
+{
+	uint16_t min_x = 0;
+	uint16_t max_x = 4095;  // Default max values
+	uint16_t min_y = 0;
+	uint16_t max_y = 4095;
+	bool calibrated = false;
+	
+	// Calculate center point for zone division
+	uint16_t getCenterX() const { return (min_x + max_x) / 2; }
+	uint16_t getCenterY() const { return (min_y + max_y) / 2; }
+};
 
 // settings
 struct TSettings
@@ -59,6 +78,7 @@ struct TSettings
 	bool saveStats{ DEFAULT_SAVESTATS };
 	bool invertColors{ DEFAULT_INVERTCOLORS };
 	int Brightness{ DEFAULT_BRIGHTNESS };
+	TouchCalibration touchCalibration;
 };
 
 #endif // _STORAGE_H_

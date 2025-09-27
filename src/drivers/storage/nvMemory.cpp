@@ -27,8 +27,8 @@ bool nvMemory::saveConfig(TSettings* Settings)
         // Save Config in JSON format
         Serial.println(F("SPIFS: Saving configuration."));
 
-        // Create a JSON document
-        StaticJsonDocument<512> json;
+        // Create a JSON document (increased size for touch calibration)
+        StaticJsonDocument<768> json;
         json[JSON_SPIFFS_KEY_POOLURL] = Settings->PoolAddress;
         json[JSON_SPIFFS_KEY_POOLPORT] = Settings->PoolPort;
         json[JSON_SPIFFS_KEY_POOLPASS] = Settings->PoolPassword;
@@ -37,6 +37,13 @@ bool nvMemory::saveConfig(TSettings* Settings)
         json[JSON_SPIFFS_KEY_STATS2NV] = Settings->saveStats;
         json[JSON_SPIFFS_KEY_INVCOLOR] = Settings->invertColors;
         json[JSON_SPIFFS_KEY_BRIGHTNESS] = Settings->Brightness;
+        
+        // Save touch calibration data
+        json[JSON_SPIFFS_KEY_TOUCH_MINX] = Settings->touchCalibration.min_x;
+        json[JSON_SPIFFS_KEY_TOUCH_MAXX] = Settings->touchCalibration.max_x;
+        json[JSON_SPIFFS_KEY_TOUCH_MINY] = Settings->touchCalibration.min_y;
+        json[JSON_SPIFFS_KEY_TOUCH_MAXY] = Settings->touchCalibration.max_y;
+        json[JSON_SPIFFS_KEY_TOUCH_CALIBRATED] = Settings->touchCalibration.calibrated;
 
         // Open config file
         File configFile = SPIFFS.open(JSON_CONFIG_FILE, "w");
@@ -83,7 +90,7 @@ bool nvMemory::loadConfig(TSettings* Settings)
             if (configFile)
             {
                 Serial.println("SPIFS: Loading config file");
-                StaticJsonDocument<512> json;
+                StaticJsonDocument<768> json;
                 DeserializationError error = deserializeJson(json, configFile);
                 configFile.close();
                 serializeJsonPretty(json, Serial);
@@ -109,6 +116,24 @@ bool nvMemory::loadConfig(TSettings* Settings)
                     } else {
                         Settings->Brightness = 250;
                     }
+                    
+                    // Load touch calibration data
+                    if (json.containsKey(JSON_SPIFFS_KEY_TOUCH_MINX)) {
+                        Settings->touchCalibration.min_x = json[JSON_SPIFFS_KEY_TOUCH_MINX].as<uint16_t>();
+                    }
+                    if (json.containsKey(JSON_SPIFFS_KEY_TOUCH_MAXX)) {
+                        Settings->touchCalibration.max_x = json[JSON_SPIFFS_KEY_TOUCH_MAXX].as<uint16_t>();
+                    }
+                    if (json.containsKey(JSON_SPIFFS_KEY_TOUCH_MINY)) {
+                        Settings->touchCalibration.min_y = json[JSON_SPIFFS_KEY_TOUCH_MINY].as<uint16_t>();
+                    }
+                    if (json.containsKey(JSON_SPIFFS_KEY_TOUCH_MAXY)) {
+                        Settings->touchCalibration.max_y = json[JSON_SPIFFS_KEY_TOUCH_MAXY].as<uint16_t>();
+                    }
+                    if (json.containsKey(JSON_SPIFFS_KEY_TOUCH_CALIBRATED)) {
+                        Settings->touchCalibration.calibrated = json[JSON_SPIFFS_KEY_TOUCH_CALIBRATED].as<bool>();
+                    }
+                    
                     return true;
                 }
                 else

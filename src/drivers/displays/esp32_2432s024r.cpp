@@ -58,7 +58,8 @@ void esp32_2432S024R_Init(void)
   
   // Initialize touchscreen with TFT_eSPI integrated support
   uint16_t calData[5] = { 300, 3600, 300, 3600, 1 };
-  tft.setTouch(calData);
+  // TEMPORARILY DISABLE TFT_eSPI TOUCH TO TEST OUR UNIFIED SYSTEM
+  // tft.setTouch(calData);
 
   // Configuring screen backlight brightness using ledcontrol channel 0.
   ledcSetup(0, 5000, 8);
@@ -92,11 +93,17 @@ void esp32_2432S024R_Init(void)
 #ifdef TOUCH_ENABLE
   touchHandler.begin(tft.width(), tft.height());
   touchHandler.setScreenSwitchCallback(alternateScreenState);
+  
+  // Load touch calibration from settings
+  touchHandler.setTouchCalibration(Settings.touchCalibration);
+  Serial.printf("Touch calibration loaded: calibrated=%s\n", 
+                Settings.touchCalibration.calibrated ? "true" : "false");
 #endif
 }
 
 void esp32_2432S024R_AlternateScreenState(void)
 {
+  Serial.println("[DEBUG] esp32_2432S024R_AlternateScreenState() called directly!");
   Serial.println("Switching display state");
   int screen_state_duty = ledcRead(0);
   if (screen_state_duty > 0) {
@@ -114,7 +121,11 @@ void esp32_2432S024R_AlternateRotation(void)
 
 // Touch reading function for TouchHandler compatibility
 bool esp32_2432S024R_getTouch(uint16_t *x, uint16_t *y) {
-  return tft.getTouch(x, y, 200);  // 200 is touch threshold
+  bool result = tft.getTouch(x, y, 200);  // 200 is touch threshold
+  if (result) {
+    Serial.printf("[DEBUG] esp32_2432S024R_getTouch() called! x=%d, y=%d\n", *x, *y);
+  }
+  return result;
 }
 
 bool bottomScreenBlue = true;
@@ -142,6 +153,10 @@ bool createBackgroundSprite(int16_t wdt, int16_t hgt){
 extern unsigned long mPoolUpdate;
 
 void printPoolData(){
+  // Skip pool data display if paused (e.g., during calibration)
+  extern bool displayPaused;
+  if (displayPaused) return;
+  
   if ((hasChangedScreen) || (mPoolUpdate == 0) || (millis() - mPoolUpdate > UPDATE_POOL_min * 60 * 1000)){     
       if (Settings.PoolAddress != "tn.vkbit.com") { 
           pData = getPoolData();             
@@ -200,6 +215,10 @@ void printPoolData(){
 
 void esp32_2432S024R_MinerScreen(unsigned long mElapsed)
 {
+  // Skip screen rendering if paused (e.g., during calibration)
+  extern bool displayPaused;
+  if (displayPaused) return;
+  
   mining_data data = getMiningData(mElapsed);
   printPoolData();
 
@@ -264,6 +283,10 @@ void esp32_2432S024R_MinerScreen(unsigned long mElapsed)
 
 void esp32_2432S024R_ClockScreen(unsigned long mElapsed)
 {
+  // Skip screen rendering if paused (e.g., during calibration)
+  extern bool displayPaused;
+  if (displayPaused) return;
+  
   if (hasChangedScreen) tft.pushImage(0, 0, minerClockWidth, minerClockHeight, minerClockScreen);
   
   printPoolData();
@@ -307,6 +330,10 @@ void esp32_2432S024R_ClockScreen(unsigned long mElapsed)
 
 void esp32_2432S024R_GlobalHashScreen(unsigned long mElapsed)
 {
+  // Skip screen rendering if paused (e.g., during calibration)
+  extern bool displayPaused;
+  if (displayPaused) return;
+  
   if (hasChangedScreen) tft.pushImage(0, 0, globalHashWidth, globalHashHeight, globalHashScreen);
   
   printPoolData();
@@ -370,6 +397,10 @@ void esp32_2432S024R_GlobalHashScreen(unsigned long mElapsed)
 
 void esp32_2432S024R_BTCprice(unsigned long mElapsed)
 {
+  // Skip screen rendering if paused (e.g., during calibration)
+  extern bool displayPaused;
+  if (displayPaused) return;
+  
   if (hasChangedScreen) tft.pushImage(0, 0, priceScreenWidth, priceScreenHeight, priceScreen);
   printPoolData();
   hasChangedScreen = false;
@@ -441,6 +472,30 @@ void esp32_2432S024R_DoLedStuff(unsigned long frame)
   if (currentScreen != currentDisplayDriver->current_cyclic_screen) hasChangedScreen ^= true;
   currentScreen = currentDisplayDriver->current_cyclic_screen;
 
+#ifdef ALTERNATIVE_LED_SETUP
+  // Alternative LED setup: fixed low intensity LED
+  switch (mMonitor.NerdStatus)
+  {
+  case NM_waitingConfig:
+    ledcWrite(1, 200); // LED rojo intensidad baja fija
+    ledcWrite(2, 255); // LED azul apagado
+    ledcWrite(3, 255); // LED verde apagado
+    break;
+
+  case NM_Connecting:
+    ledcWrite(1, 200); // LED rojo intensidad baja fija
+    ledcWrite(2, 255); // LED azul apagado
+    ledcWrite(3, 255); // LED verde apagado
+    break;
+
+  case NM_hashing:
+    ledcWrite(1, 200); // LED rojo intensidad baja fija
+    ledcWrite(2, 255); // LED azul apagado
+    ledcWrite(3, 255); // LED verde apagado
+    break;
+  }
+#else
+  // Standard LED behavior
   switch (mMonitor.NerdStatus)
   {
   case NM_waitingConfig:
@@ -473,6 +528,7 @@ void esp32_2432S024R_DoLedStuff(unsigned long frame)
     }
     break;
   }
+#endif
 }
 
 CyclicScreenFunction esp32_2432S024RCyclicScreens[] = {esp32_2432S024R_MinerScreen, esp32_2432S024R_ClockScreen, esp32_2432S024R_GlobalHashScreen, esp32_2432S024R_BTCprice};

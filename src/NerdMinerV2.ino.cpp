@@ -18,6 +18,9 @@
 
 #ifdef TOUCH_ENABLE
 #include "TouchHandler.h"
+#include "TouchCalibration.h"
+#include "drivers/storage/nvMemory.h"
+#include "drivers/storage/storage.h"
 #endif
 
 
@@ -40,9 +43,18 @@
 
 #ifdef TOUCH_ENABLE
 extern TouchHandler touchHandler;
+#ifdef ESP32_2432S024R
+extern bool esp32_2432S024R_getTouch(uint16_t *x, uint16_t *y);
+#endif
 #endif
 
 extern monitor_data mMonitor;
+
+#ifdef TOUCH_ENABLE
+extern TSettings Settings;
+extern nvMemory nvMem;
+extern void alternateScreenState();
+#endif
 
 #ifdef SD_ID
   SDCard SDCrd = SDCard(SD_ID);
@@ -259,7 +271,38 @@ void loop() {
   #endif
 
 #ifdef TOUCH_ENABLE
-  touchHandler.isTouched();
+  // Unified touch handling: processes both screen switching and calibration trigger
+  static bool calibrationTriggered = false;
+  
+  // Check touch state and handle all touch logic in single function
+  uint16_t touchResult = touchHandler.isTouched();
+  
+  // Check if calibration was triggered (special return value from isTouched)
+  if (touchResult == 999 && !calibrationTriggered) {  // 999 = calibration trigger signal
+    Serial.println("Calibration trigger detected! (Touch held 10s) Starting calibration...");
+    calibrationTriggered = true;
+    calibrationInProgress = true;  // Prevent reset during calibration
+    displayPaused = true;          // Pause display updates during calibration
+    
+    if (touchHandler.performCalibration()) {
+      Serial.println("Touch calibration completed successfully!");
+      
+      // Apply new calibration to TouchHandler and save settings
+      touchHandler.setTouchCalibration(Settings.touchCalibration);
+      nvMem.saveConfig(&Settings);
+      
+      // Re-enable screen switching callback (gets lost during calibration)
+      touchHandler.setScreenSwitchCallback(alternateScreenState);
+      
+      Serial.println("Touch calibration applied and saved!");
+    } else {
+      Serial.println("Touch calibration failed!");
+    }
+    
+    displayPaused = false;         // Resume display updates after calibration
+    calibrationInProgress = false; // Re-enable reset after calibration
+    calibrationTriggered = false;
+  }
 #endif
   wifiManagerProcess(); // avoid delays() in loop when non-blocking and other long running code
 

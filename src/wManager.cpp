@@ -119,8 +119,18 @@ void configModeCallback(WiFiManager* myWiFiManager)
     Serial.println(WiFi.softAPIP());
 }
 
+// Flag to prevent reset during calibration
+bool calibrationInProgress = false;
+
+// Flag to pause display updates during calibration
+bool displayPaused = false;
+
 void reset_configuration()
 {
+    if (calibrationInProgress) {
+        Serial.println("Calibration in progress - ignoring reset request");
+        return;
+    }
     Serial.println("Erasing Config, restarting");
     nvMem.deleteConfig();
     resetStat();

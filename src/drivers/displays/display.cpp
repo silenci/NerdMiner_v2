@@ -118,14 +118,24 @@ void drawCurrentScreen(unsigned long mElapsed)
   currentDisplayDriver->cyclic_screens[currentDisplayDriver->current_cyclic_screen](mElapsed);
 }
 
+// Global flag to pause display updates during calibration
+extern bool displayPaused;
+
 // Animate the current cyclic screen
 void animateCurrentScreen(unsigned long frame)
 {
-  currentDisplayDriver->animateCurrentScreen(frame);
+  // Skip screen animation if paused (e.g., during calibration)
+  if (!displayPaused) {
+    currentDisplayDriver->animateCurrentScreen(frame);
+  }
 }
 
 // Do LED stuff
+
 void doLedStuff(unsigned long frame)
 {
-  currentDisplayDriver->doLedStuff(frame);
+  // Skip display updates if paused (e.g., during calibration)
+  if (!displayPaused) {
+    currentDisplayDriver->doLedStuff(frame);
+  }
 }

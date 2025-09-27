@@ -2,6 +2,7 @@
 #define _TOUCHHANDLER_H_
 #ifdef TOUCH_ENABLE
 #include <TFT_eSPI.h>  // TFT display library
+#include "drivers/storage/storage.h"
 
 #ifdef ESP32_2432S024R
 // For ESP32-2432S024R use TFT_eSPI integrated touchscreen
@@ -22,6 +23,10 @@ public:
   uint16_t isTouched();
   void setScreenSwitchCallback(void (*callback)());
   void setScreenSwitchAltCallback(void (*callback)());
+  
+  // Touch calibration methods
+  void setTouchCalibration(const struct TouchCalibration& calibration);
+  bool performCalibration();       // Execute calibration process and save results
 private:
   bool debounce();
   TFT_eSPI& tft;
@@ -34,9 +39,11 @@ private:
   uint8_t irqPin;
   SPIClass& spi;
   unsigned long lastTouchTime;
-  // unsigned int lower_switch;
+  // unsigned int lower_switch;  
   void (*screenSwitchCallback)();
   void (*screenSwitchAltCallback)();
+  struct TouchCalibration touchCalibration_;
+  bool lastTouchState_;  // Last touch state from isTouched() for checkCalibrationTrigger()
 };
 #endif
 
