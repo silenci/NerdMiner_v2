@@ -95,12 +95,17 @@ void esp32_2432S028R_Init(void)
     return;
   }
   
-  pinMode(LED_PIN, OUTPUT);
-  pinMode(LED_PIN_B, OUTPUT);
-  pinMode(LED_PIN_G, OUTPUT);
-  digitalWrite(LED_PIN, LOW);
-  digitalWrite(LED_PIN_B, HIGH);
-  digitalWrite(LED_PIN_G, HIGH);
+  // Configure RGB LEDs with PWM (channels 1, 2, 3) igual que el 2.4"
+  ledcSetup(1, 5000, 8);  // Canal 1 per LED vermell
+  ledcSetup(2, 5000, 8);  // Canal 2 per LED blau
+  ledcSetup(3, 5000, 8);  // Canal 3 per LED verd
+  ledcAttachPin(LED_PIN, 1);    // LED vermell al canal 1
+  ledcAttachPin(LED_PIN_B, 2);  // LED blau al canal 2
+  ledcAttachPin(LED_PIN_G, 3);  // LED verd al canal 3
+  // Inicialitza LEDs apagats (255=off, 0=on)
+  ledcWrite(1, 255);  // Vermell apagat
+  ledcWrite(2, 255);  // Blau apagat
+  ledcWrite(3, 255);  // Verd apagat
   pData.bestDifficulty = "0";
   pData.workersHash = "0";
   pData.workersCount = 0;
@@ -536,32 +541,31 @@ void esp32_2432S028R_DoLedStuff(unsigned long frame)
 {
   unsigned long currentMillis = millis();    
   // / Check the touch coordinates 110x185 210x240
-  if (currentMillis - previousTouchMillis >= 500)
-    { 
-      int16_t t_x , t_y;  // To store the touch coordinates
+    if (currentMillis - previousTouchMillis >= 500)
+    {
+      int16_t t_x, t_y;
       bool pressed = touch.getXY(t_x, t_y);
-      if (pressed) {                        
-          if (((t_x > 109)&&(t_x < 211)) && ((t_y > 185)&&(t_y < 241))) {
-            bottomScreenBlue ^= true;
-            hasChangedScreen = true;
-          } else if((t_x > 235) && ((t_y > 0)&&(t_y < 16))) {
-            // Touching the top right corner of the screen, roughly in the gray status label.
-            // Disabling the screen backlight. 
-            esp32_2432S028R_AlternateScreenState();
-          }
-          else
-            if (t_x > 160) {
-              // next screen
-             // Serial.printf("Next screen touch( x:%d y:%d )\n", t_x, t_y);              
-              currentDisplayDriver->current_cyclic_screen = (currentDisplayDriver->current_cyclic_screen + 1) % currentDisplayDriver->num_cyclic_screens;
-            } else if (t_x < 160)
-            {
-              // Previus screen
-             // Serial.printf("Previus screen touch( x:%d y:%d )\n", t_x, t_y);              
-              /* Serial.println(currentDisplayDriver->current_cyclic_screen); */
-              currentDisplayDriver->current_cyclic_screen = currentDisplayDriver->current_cyclic_screen - 1;      
-              if (currentDisplayDriver->current_cyclic_screen<0) currentDisplayDriver->current_cyclic_screen = currentDisplayDriver->num_cyclic_screens - 1;              
-            }
+      if (pressed) {
+#ifdef DISABLE_SCREEN_SWITCHING
+        esp32_2432S028R_AlternateScreenState();
+#else
+        if (((t_x > 109)&&(t_x < 211)) && ((t_y > 185)&&(t_y < 241))) {
+          bottomScreenBlue ^= true;
+          hasChangedScreen = true;
+        } else if((t_x > 235) && ((t_y > 0)&&(t_y < 16))) {
+          // Touching the top right corner of the screen, roughly in the gray status label.
+          // Disabling the screen backlight. 
+          esp32_2432S028R_AlternateScreenState();
+        }
+        else if (t_x > 160) {
+          // next screen
+          currentDisplayDriver->current_cyclic_screen = (currentDisplayDriver->current_cyclic_screen + 1) % currentDisplayDriver->num_cyclic_screens;
+        } else if (t_x < 160) {
+          // Previous screen
+          currentDisplayDriver->current_cyclic_screen = currentDisplayDriver->current_cyclic_screen - 1;
+          if (currentDisplayDriver->current_cyclic_screen < 0) currentDisplayDriver->current_cyclic_screen = currentDisplayDriver->num_cyclic_screens - 1;
+        }
+#endif
       }
       previousTouchMillis = currentMillis;
     }
@@ -569,32 +573,54 @@ void esp32_2432S028R_DoLedStuff(unsigned long frame)
     if (currentScreen != currentDisplayDriver->current_cyclic_screen) hasChangedScreen ^= true;
     currentScreen = currentDisplayDriver->current_cyclic_screen;
 
+  #ifdef ALTERNATIVE_LED_SETUP
+  // Alternative LED setup: fixed low intensity LED (blue)
   switch (mMonitor.NerdStatus)
   {
   case NM_waitingConfig:
-    digitalWrite(LED_PIN, LOW); // LED encendido de forma continua
+    ledcWrite(1, 255); // LED rojo apagado
+    ledcWrite(2, 254); // LED azul encès a intensitat mínima
+    ledcWrite(3, 255); // LED verde apagado
     break;
 
   case NM_Connecting:
-    if (currentMillis - previousMillis >= 500)
-    { // 0.5sec blink
-      previousMillis = currentMillis;
-      // Serial.print("C");
-      digitalWrite(LED_PIN, HIGH);
-      digitalWrite(LED_PIN_B, !digitalRead(LED_PIN)); // Cambia el estado del LED
-    }
+    ledcWrite(1, 255); // LED rojo apagado
+    ledcWrite(2, 254); // LED azul encès a intensitat mínima
+    ledcWrite(3, 255); // LED verde apagado
     break;
 
   case NM_hashing:
-    if (currentMillis - previousMillis >= 500)
-    { // 0.1sec blink
-      // Serial.print("h");
-      previousMillis = currentMillis;
-      digitalWrite(LED_PIN_B, HIGH);
-      digitalWrite(LED_PIN, !digitalRead(LED_PIN)); // Cambia el estado del LED      
-    }
+    ledcWrite(1, 255); // LED rojo apagado
+    ledcWrite(2, 254); // LED azul encès a intensitat mínima
+    ledcWrite(3, 255); // LED verde apagado
     break;
-  }
+    }
+  #else
+    switch (mMonitor.NerdStatus)
+    {
+    case NM_waitingConfig:
+      digitalWrite(LED_PIN, LOW); // LED encès de forma contínua
+      break;
+
+    case NM_Connecting:
+      if (currentMillis - previousMillis >= 500)
+      { // 0.5sec blink
+        previousMillis = currentMillis;
+        digitalWrite(LED_PIN, HIGH);
+        digitalWrite(LED_PIN_B, !digitalRead(LED_PIN)); // Canvia l'estat del LED
+      }
+      break;
+
+    case NM_hashing:
+      if (currentMillis - previousMillis >= 500)
+      { // 0.1sec blink
+        previousMillis = currentMillis;
+        digitalWrite(LED_PIN_B, HIGH);
+        digitalWrite(LED_PIN, !digitalRead(LED_PIN)); // Canvia l'estat del LED      
+      }
+      break;
+    }
+  #endif
   
 
 }
